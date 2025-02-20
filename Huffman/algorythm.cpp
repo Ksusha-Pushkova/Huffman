@@ -190,3 +190,78 @@ void compressBMP(const string& inputFilePath, const string& outputFilePath) {
     outputFile.close();
     delete root;
 }
+
+// функция для чтения битов из файла
+string readBitsFromFile(ifstream& inputFile) {
+    string bitString;
+    unsigned char byte;
+    while (inputFile.get((char&)byte)) {
+        for (int i = 7; i >= 0; --i) {
+            bitString += ((byte >> i) & 1) ? '1' : '0';
+        }
+    }
+    return bitString;
+}
+
+// Функция для разжатия текстового файла
+void decompressText(const string& inputFilePath, const string& outputFilePath) {
+    ifstream inputFile(inputFilePath, ios::binary);
+    if (!inputFile.is_open()) {
+        cerr << "Ошибка: Не удалось открыть файл для декомпрессии: " << inputFilePath << endl;
+        return;
+    }
+
+    // Чтение битовой строки из файла
+    string bitString = readBitsFromFile(inputFile);
+    inputFile.close();
+
+    // Создание обратного отображения кодов 
+    unordered_map<string, string> huffmanCodes;
+    unordered_map<string, int> frequency;
+    string symbol;
+
+    //Подсчет частот
+    if (!inputFile.is_open()) {
+        ifstream inputFile(inputFilePath);
+        string line;
+
+        // Подсчет частоты символов с учётом новой строки
+        while (getline(inputFile, line)) {
+            for (char c : line) {
+                frequency[string(1, c)]++;
+            }
+            frequency["\n"]++; 
+        }
+
+        inputFile.close();
+    }
+
+    // Создание дерева 
+    Node* root = createHuffmanTree(frequency);
+
+    // Генерация кодов
+    generateHuffmanCodes(root, "", huffmanCodes);
+    unordered_map<string, string> reverseHuffmanCodes;
+    for (const auto& pair : huffmanCodes) {
+        reverseHuffmanCodes[pair.second] = pair.first;
+    }
+
+    // Декодирование данных
+    string decodedString;
+    string currentCode;
+    for (char bit : bitString) {
+        currentCode += bit;
+        if (reverseHuffmanCodes.count(currentCode)) {
+            decodedString += reverseHuffmanCodes[currentCode];
+            currentCode = "";
+        }
+    }
+
+    // Запись разжатого файла
+    ofstream outputFile(outputFilePath);
+    outputFile << decodedString;
+    outputFile.close();
+
+    // Освобождение памяти
+    delete root;
+}
