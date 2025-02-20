@@ -113,3 +113,80 @@ void compressText(const string& inputFilePath, const string& outputFilePath) {
     delete root;
 }
 
+// Функция для сжатия BMP файла
+void compressBMP(const string& inputFilePath, const string& outputFilePath) {
+    ifstream inputFile(inputFilePath, ios::binary);
+
+    // Чтение заголовка BMP
+    unsigned char header[54];
+    inputFile.read(reinterpret_cast<char*>(header), sizeof(header));
+
+    // Получение ширины и высоты изображения
+    int width = *(int*)&header[18];
+    int height = *(int*)&header[22];
+
+    // Чтение пикселей
+    unordered_map<string, int> frequency;
+
+    for (int i = 0; i < height; ++i) {
+        for (int j = 0; j < width; ++j) {
+            unsigned char pixel[3];
+            inputFile.read(reinterpret_cast<char*>(pixel), sizeof(pixel));
+            string color = string(pixel, pixel + 3);
+            frequency[color]++;
+        }
+
+        // Пропуск заполнителей (padding)
+        inputFile.ignore((4 - (width * 3) % 4) % 4);
+    }
+
+    inputFile.close();
+
+    // Создание дерева Хаффмана
+    Node* root = createHuffmanTree(frequency);
+
+    // Генерация кодов Хаффмана
+    unordered_map<string, string> huffmanCodes;
+    generateHuffmanCodes(root, "", huffmanCodes);
+
+    // Сжатие данных
+    string encodedString;
+
+    inputFile.open(inputFilePath, ios::binary);
+
+    // Пропускаем заголовок
+    inputFile.read(reinterpret_cast<char*>(header), sizeof(header));
+
+    for (int i = 0; i < height; ++i) {
+        for (int j = 0; j < width; ++j) {
+            unsigned char pixel[3];
+            inputFile.read(reinterpret_cast<char*>(pixel), sizeof(pixel));
+            string color = string(pixel, pixel + 3);
+            encodedString += huffmanCodes[color];
+        }
+
+        // Пропуск заполнителей (padding)
+        inputFile.ignore((4 - (width * 3) % 4) % 4);
+    }
+
+    inputFile.close();
+
+    ofstream outputFile(outputFilePath, ios::binary);
+
+    outputFile.write(reinterpret_cast<char*>(header), sizeof(header));
+
+    // Преобразование закодированной строки в байты
+    for (size_t i = 0; i < encodedString.size(); i += 8) {
+        bitset<8> byte(encodedString.substr(i, 8));
+        outputFile.put(static_cast<unsigned char>(byte.to_ulong()));
+    }
+
+    // Если длина закодированной строки не кратна 8, добавляем недостающие нули
+    if (encodedString.size() % 8 != 0) {
+        bitset<8> byte(encodedString.substr(encodedString.size() - (encodedString.size() % 8)).append(8 - (encodedString.size() % 8), '0'));
+        outputFile.put(static_cast<unsigned char>(byte.to_ulong()));
+    }
+
+    outputFile.close();
+    delete root;
+}
