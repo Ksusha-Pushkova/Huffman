@@ -1,26 +1,33 @@
-#ifdef HEADER_H
-#define HEADER_H
+#ifndef HUFFMAN_H
+#define HUFFMAN_H
+
 #include <iostream>
 #include <queue>
 #include <unordered_map>
 #include <vector>
 #include <string>
 #include <bitset>
+
 using namespace std;
+
+// Структура для узла дерева Хаффмана
 struct Node {
-	string data;
-	int freq;
-	Node* left;
-	Node* right;
+    string data; // Для хранения символа или RGB-значения
+    int freq;
+    Node* left;
+    Node* right;
 
-	Node(string d, int frequency);
-	~Node()
+    Node(string d, int frequency);
+    ~Node(); // Объявление деструктора
 };
 
+// Компаратор для приоритетной очереди
 struct Compare {
-	bool operator()(Node* l, Node* r);
+    bool operator()(Node* l, Node* r);
 };
+
+// Прототипы функций
 Node* createHuffmanTree(const unordered_map<string, int>& frequency);
 void generateHuffmanCodes(Node* root, const string& str, unordered_map<string, string>& huffmanCodes);
 
-#endif;
+#endif // HUFFMAN_H
