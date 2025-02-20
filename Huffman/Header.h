@@ -29,5 +29,9 @@ struct Compare {
 // Прототипы функций
 Node* createHuffmanTree(const unordered_map<string, int>& frequency);
 void generateHuffmanCodes(Node* root, const string& str, unordered_map<string, string>& huffmanCodes);
+void compressText(const string& inputFilePath, const string& outputFilePath);
+void compressBMP(const string& inputFilePath, const string& outputFilePath);
+void decompressText(const string& inputFilePath, const string& outputFilePath);
+void decompressBMP(const string& inputFilePath, const string& outputFilePath);
 
 #endif // HUFFMAN_H

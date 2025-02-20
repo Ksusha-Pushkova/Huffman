@@ -265,3 +265,112 @@ void decompressText(const string& inputFilePath, const string& outputFilePath) {
     // Освобождение памяти
     delete root;
 }
+
+// Функция для декомпрессии BMP файла
+void decompressBMP(const string& inputFilePath, const string& outputFilePath) {
+    ifstream inputFile(inputFilePath, ios::binary);
+    if (!inputFile.is_open()) {
+        cerr << "Ошибка: Не удалось открыть файл для декомпрессии: " << inputFilePath << endl;
+        return;
+    }
+
+    // Чтение заголовка BMP
+    unsigned char header[54];
+    inputFile.read(reinterpret_cast<char*>(header), sizeof(header));
+
+    // Получение ширины и высоты изображения
+    int width = *(int*)&header[18];
+    int height = *(int*)&header[22];
+
+    // Чтение битовой строки из файла (после заголовка)
+    string bitString;
+    unsigned char byte;
+
+    // Пропускаем заголовок
+    inputFile.seekg(54, ios::beg); // Перемещаем указатель чтения после заголовка
+    while (inputFile.get((char&)byte)) {
+        for (int i = 7; i >= 0; --i) {
+            bitString += ((byte >> i) & 1) ? '1' : '0';
+        }
+    }
+    inputFile.close();
+
+    // Создание обратного отображения кодов 
+    unordered_map<string, string> huffmanCodes;
+    unordered_map<string, int> frequency;
+
+    //Подсчет частот
+    if (!inputFile.is_open()) {
+        ifstream inputFile(inputFilePath, ios::binary);
+        // Пропускаем заголовок
+        inputFile.seekg(54, ios::beg);
+
+        // Чтение пикселей
+        for (int i = 0; i < height; ++i) {
+            for (int j = 0; j < width; ++j) {
+                unsigned char pixel[3];
+                inputFile.read(reinterpret_cast<char*>(pixel), sizeof(pixel));
+                string color = string(pixel, pixel + 3);
+                frequency[color]++;
+            }
+
+            // Пропуск заполнителей (padding)
+            inputFile.ignore((4 - (width * 3) % 4) % 4);
+        }
+
+        inputFile.close();
+    }
+
+    // Создание дерева 
+    Node* root = createHuffmanTree(frequency);
+
+    // Генерация кодов 
+    generateHuffmanCodes(root, "", huffmanCodes);
+
+    unordered_map<string, string> reverseHuffmanCodes;
+    for (const auto& pair : huffmanCodes) {
+        reverseHuffmanCodes[pair.second] = pair.first;
+    }
+
+    // Декодирование данных
+    vector<string> decodedColors;
+    string currentCode;
+    for (char bit : bitString) {
+        currentCode += bit;
+        if (reverseHuffmanCodes.count(currentCode)) {
+            decodedColors.push_back(reverseHuffmanCodes[currentCode]);
+            currentCode = "";
+        }
+    }
+
+    // Запись разжатого файла
+    ofstream outputFile(outputFilePath, ios::binary);
+    outputFile.write(reinterpret_cast<char*>(header), sizeof(header));
+
+    // Запись пикселей
+    int colorIndex = 0;
+    for (int i = 0; i < height; ++i) {
+        for (int j = 0; j < width; ++j) {
+            if (colorIndex < decodedColors.size()) {
+                string color = decodedColors[colorIndex++];
+                outputFile.write(color.data(), 3); // Запись 3 байтов цвета
+            }
+            else {
+                // Обработка случая, если данных недостаточно
+                unsigned char blackPixel[3] = { 0, 0, 0 }; // Черный пиксель
+                outputFile.write(reinterpret_cast<char*>(blackPixel), sizeof(blackPixel));
+            }
+        }
+
+        // Запись заполнителей (padding)
+        for (int k = 0; k < (4 - (width * 3) % 4) % 4; ++k) {
+            outputFile.put(0);
+        }
+    }
+
+    outputFile.close();
+
+
+    // Освобождение памяти
+    delete root;
+}
