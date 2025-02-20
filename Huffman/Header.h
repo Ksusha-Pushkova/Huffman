@@ -20,3 +20,7 @@ struct Node {
 struct Compare {
 	bool operator()(Node* l, Node* r);
 };
+Node* createHuffmanTree(const unordered_map<string, int>& frequency);
+void generateHuffmanCodes(Node* root, const string& str, unordered_map<string, string>& huffmanCodes);
+
+#endif;
